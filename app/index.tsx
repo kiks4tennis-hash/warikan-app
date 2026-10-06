@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { minimumTransfers } from './settlement';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Keyboard, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -21,20 +22,14 @@ function calculate(total: number, people: Person[]): { owed: number[]; transfers
   for (let k = 0; k < remainder; k += 1) owed[order[k].i] += 1;
 
   const balances = people.map((p, i) => Number(p.paid || 0) - owed[i]);
-  const creditors = balances.map((v, i) => ({ i, amount: v })).filter((x) => x.amount > 0).sort((a, b) => b.amount - a.amount);
-  const debtors = balances.map((v, i) => ({ i, amount: -v })).filter((x) => x.amount > 0).sort((a, b) => b.amount - a.amount);
   const labels = getPersonLabels(people);
-  const transfers: Transfer[] = [];
-  let ci = 0; let di = 0;
-  while (ci < creditors.length && di < debtors.length) {
-    const amount = Math.min(creditors[ci].amount, debtors[di].amount);
-    const fromIndex = debtors[di].i;
-    const toIndex = creditors[ci].i;
-    transfers.push({ fromId: people[fromIndex].id, toId: people[toIndex].id, from: labels[fromIndex], to: labels[toIndex], amount });
-    creditors[ci].amount -= amount; debtors[di].amount -= amount;
-    if (creditors[ci].amount === 0) ci += 1;
-    if (debtors[di].amount === 0) di += 1;
-  }
+  const transfers: Transfer[] = minimumTransfers(balances).map(({ fromIndex, toIndex, amount }) => ({
+    fromId: people[fromIndex].id,
+    toId: people[toIndex].id,
+    from: labels[fromIndex],
+    to: labels[toIndex],
+    amount,
+  }));
   return { owed, transfers };
 }
 
