@@ -1,0 +1,18 @@
+{
+  "expo": {
+    "name": "割り勘ノート",
+    "slug": "warikan-app",
+    "scheme": "warikanseisan",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kazumax71.warikanseisan"
+    },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
+
