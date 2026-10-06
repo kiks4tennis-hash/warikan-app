@@ -11,7 +11,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.kazumax71.warikanseisan"
     },
-    "plugins": ["expo-router"],
+    "plugins": [
+      "expo-router",
+      ["expo-image-picker", { "photosPermission": "レシート画像を選択して支出を記録するために写真へのアクセスを使用します。" }]
+    ],
     "experiments": { "typedRoutes": true }
   }
 }
