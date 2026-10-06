@@ -65,7 +65,10 @@ export async function listMyGroups(userId: string): Promise<GroupSummary[]> {
     .select('ledger_groups!inner(id,title,kind,base_currency,created_at)')
     .eq('user_id', userId);
   if (error) throw error;
-  return (data ?? []).flatMap((row) => {
+  const rows = (data ?? []) as unknown as { ledger_groups: {
+    id: string; title: string; kind: GroupKind; base_currency: CurrencyCode; created_at: string;
+  } | null }[];
+  return rows.flatMap((row) => {
     const group = row.ledger_groups as unknown as {
       id: string; title: string; kind: GroupKind; base_currency: CurrencyCode; created_at: string;
     } | null;
@@ -94,7 +97,8 @@ export async function getGroupMembers(groupId: string): Promise<GroupMemberRow[]
     .eq('group_id', groupId)
     .order('joined_at', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((row) => ({ userId: row.user_id, displayName: row.display_name, role: row.role }));
+  const rows = (data ?? []) as unknown as { user_id: string; display_name: string; role: 'owner' | 'member' }[];
+  return rows.map((row) => ({ userId: row.user_id, displayName: row.display_name, role: row.role }));
 }
 
 export async function getGroupExpenses(groupId: string): Promise<GroupExpenseRow[]> {
@@ -104,7 +108,12 @@ export async function getGroupExpenses(groupId: string): Promise<GroupExpenseRow
     .eq('group_id', groupId)
     .order('created_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((row) => ({
+  const rows = (data ?? []) as unknown as {
+    id: string; title: string; category: string; amount_minor: number | string; currency: string;
+    rate_to_base: number | string; payer_id: string; shares: unknown; memo: string;
+    receipt_path: string | null; created_by: string; created_at: string;
+  }[];
+  return rows.map((row) => ({
     id: row.id,
     title: row.title,
     category: row.category,
@@ -173,7 +182,11 @@ export async function getGroupChecklist(groupId: string): Promise<GroupChecklist
     .eq('group_id', groupId)
     .order('created_at', { ascending: true });
   if (error) throw error;
-  return (data ?? []).map((row) => ({
+  const rows = (data ?? []) as unknown as {
+    id: string; title: string; kind: GroupChecklistRow['kind']; completed: boolean;
+    assigned_to: string | null; due_at: string | null; created_at: string;
+  }[];
+  return rows.map((row) => ({
     id: row.id, title: row.title, kind: row.kind, completed: row.completed,
     assignedTo: row.assigned_to, dueAt: row.due_at, createdAt: row.created_at,
   }));
