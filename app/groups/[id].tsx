@@ -220,7 +220,7 @@ export default function GroupDetailScreen() {
       </View>
       <Text style={s.eyebrow}>{GROUP_LABEL[kind]} · {baseCurrency}基準</Text>
       <Text style={s.heading}>{title}</Text>
-      <Text style={s.memberLine}>参加者：{members.map((member) => member.displayName).join('、')}</Text>
+      <Text style={s.memberLine}>参加者：{members.map((member) => memberLabel(member.userId)).join('、')}</Text>
       <View style={s.tabs}>{([
         ['expenses', '支出'], ['checklist', 'チェックリスト'], ['analysis', '精算・分析'],
       ] as [Tab, string][]).map(([key, label]) => <Pressable key={key} onPress={() => setTab(key)} style={[s.tab, tab === key && s.activeTab]}><Text style={[s.tabText, tab === key && s.activeTabText]}>{label}</Text></Pressable>)}</View>
@@ -236,9 +236,9 @@ export default function GroupDetailScreen() {
           <Text style={s.label}>金額・通貨</Text>
           <View style={s.row}><TextInput value={amountText} onChangeText={(value) => setAmountText(value.replace(/[^0-9.,]/g, ''))} keyboardType="decimal-pad" placeholder="0" style={[s.input, s.amountInput]} /><Pressable onPress={() => setShowCurrencies(true)} style={s.currencyButton}><Text style={s.currencyButtonText}>{currency}⌄</Text></Pressable></View>
           {currency !== baseCurrency && <><Text style={s.label}>換算レート（1 {currency} = ? {baseCurrency}）</Text><TextInput value={rateText} onChangeText={(value) => setRateText(value.replace(/[^0-9.]/g, ''))} keyboardType="decimal-pad" placeholder="1.0" style={s.input} /><Text style={s.hint}>為替レートは手入力です。カード明細の円換算額が分かる場合は、その額を基準にレートを入力してください。</Text></>}
-          <Text style={s.label}>支払った人</Text><View style={s.chipRow}>{members.map((member) => <Pressable key={member.userId} onPress={() => setPayerId(member.userId)} style={[s.chip, payerId === member.userId && s.selectedChip]}><Text style={[s.chipText, payerId === member.userId && s.selectedChipText]}>{member.displayName}</Text></Pressable>)}</View>
+          <Text style={s.label}>支払った人</Text><View style={s.chipRow}>{members.map((member) => <Pressable key={member.userId} onPress={() => setPayerId(member.userId)} style={[s.chip, payerId === member.userId && s.selectedChip]}><Text style={[s.chipText, payerId === member.userId && s.selectedChipText]}>{memberLabel(member.userId)}</Text></Pressable>)}</View>
           <Text style={s.label}>負担する人（外す人のチェックを外す）</Text>
-          <View style={s.chipRow}>{members.map((member) => { const included = !excluded.includes(member.userId); return <Pressable key={member.userId} onPress={() => setExcluded((current) => included ? [...current, member.userId] : current.filter((id) => id !== member.userId))} style={[s.chip, included && s.includedChip]}><Text style={[s.chipText, included && s.includedChipText]}>{included ? '✓ ' : ''}{member.displayName}</Text></Pressable>; })}</View>
+          <View style={s.chipRow}>{members.map((member) => { const included = !excluded.includes(member.userId); return <Pressable key={member.userId} onPress={() => setExcluded((current) => included ? [...current, member.userId] : current.filter((id) => id !== member.userId))} style={[s.chip, included && s.includedChip]}><Text style={[s.chipText, included && s.includedChipText]}>{included ? '✓ ' : ''}{memberLabel(member.userId)}</Text></Pressable>; })}</View>
           <Pressable onPress={() => void onAddExpense()} disabled={saving} style={[s.primary, saving && s.disabled]}><Text style={s.primaryText}>{saving ? '保存中…' : '支出を追加'}</Text></Pressable>
           {!!error && <Text style={s.error}>{error}</Text>}
         </View>
