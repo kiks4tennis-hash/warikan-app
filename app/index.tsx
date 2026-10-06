@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
 import { minimumTransfers } from './settlement';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Keyboard, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -47,6 +48,7 @@ function getPersonLabels(people: Person[]): string[] {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [title, setTitle] = useState('飲み会');
   const [totalText, setTotalText] = useState('');
   const [people, setPeople] = useState<Person[]>([newPerson(1), newPerson(2)]);
@@ -118,7 +120,7 @@ export default function Home() {
 
         {showSettings ? <View style={s.card}>
           <Text style={s.sectionTitle}>設定・サポート</Text>
-          <Text style={s.settingIntro}>精算内容は端末内だけに保存します。アカウント登録や広告・利用状況の計測はありません。</Text>
+          <Text style={s.settingIntro}>個人精算の履歴は端末内、グループ台帳の情報はSupabaseに保存して参加メンバーと共有します。広告・利用状況の計測はありません。</Text>
           <Pressable onPress={() => setShowPrivacy(true)} style={s.settingRow} accessibilityRole="button"><View><Text style={s.settingTitle}>プライバシーポリシー</Text><Text style={s.settingSubtitle}>このアプリで扱う情報を確認</Text></View><Text style={s.settingChevron}>›</Text></Pressable>
           <Pressable onPress={contactSupport} style={s.settingRow} accessibilityRole="button"><View><Text style={s.settingTitle}>お問い合わせ</Text><Text style={s.settingSubtitle}>{SUPPORT_EMAIL}</Text></View><Text style={s.settingChevron}>↗</Text></Pressable>
           <Text style={s.settingFootnote}>履歴は「履歴」画面から削除できます。</Text>
@@ -128,6 +130,7 @@ export default function Home() {
           {history.length > 0 && <Pressable onPress={deleteHistory} style={s.deleteButton}><Text style={s.deleteText}>履歴をすべて削除</Text></Pressable>}
         </View> : <>
           <View style={s.hero}><Text style={s.heroTitle}>気まずい精算を、さっと解決。</Text><Text style={s.heroSub}>負担額と送金先を自動で計算します。</Text></View>
+          <Pressable onPress={() => router.push('/groups')} style={[s.primary, { marginTop: 0, marginBottom: 14 }]}><Text style={s.primaryText}>旅行・家計のグループ台帳　›</Text></Pressable>
           <View style={s.card}>
             <Text style={s.label}>会の名前</Text><TextInput value={title} onChangeText={setTitle} placeholder="例：飲み会" style={s.textInput} maxLength={32} accessibilityLabel="会の名前" />
             <Text style={[s.label, s.spaced]}>会計の合計</Text><View style={s.moneyInput}><TextInput value={totalText} onChangeText={(v) => { setTotalText(v.replace(/[^0-9]/g, '')); setResult(null); setSavedId(null); }} keyboardType="number-pad" placeholder="0" style={s.moneyField} accessibilityLabel="会計の合計金額"/><Text style={s.yen}>円</Text></View>
@@ -160,9 +163,10 @@ export default function Home() {
           <View style={s.policyHeader}><Text style={s.sectionTitle}>プライバシーポリシー</Text><Pressable onPress={() => setShowPrivacy(false)} accessibilityRole="button"><Text style={s.policyClose}>閉じる</Text></Pressable></View>
           <ScrollView contentContainerStyle={s.policyContent}>
             <Text style={s.policyUpdated}>最終更新日: 2026年10月6日</Text>
-            <Text style={s.policyTitle}>端末内で扱う情報</Text><Text style={s.policyText}>会の名前、参加者名、会計金額、負担比率、立替額および計算結果は、精算履歴を保存した場合に限り、この端末内に保存されます。履歴はアプリ内から削除できます。アプリを削除すると保存データも削除される場合があります。</Text>
-            <Text style={s.policyTitle}>外部への送信</Text><Text style={s.policyText}>本アプリは精算情報を開発者や第三者のサーバーへ送信しません。アカウント、広告SDK、Analytics SDKは使用していません。</Text>
-            <Text style={s.policyTitle}>共有機能</Text><Text style={s.policyText}>「結果を共有」を選ぶと、精算結果をOSの共有シートに渡します。共有先とその後の情報の取扱いは、利用者が選んだサービスのポリシーに従います。</Text>
+            <Text style={s.policyTitle}>端末内の情報</Text><Text style={s.policyText}>個人精算の会の名前、参加者名、金額、負担比率、立替額および計算結果は、履歴を保存した場合に端末内に保存されます。履歴はアプリ内から削除できます。</Text>
+            <Text style={s.policyTitle}>グループ台帳の情報</Text><Text style={s.policyText}>グループ名、表示名、支出の内容・金額・通貨・換算レート・支払者・負担対象、チェックリストおよび添付領収書はSupabaseへ送信され、同じグループのメンバーと共有されます。アプリを削除してもクラウド上の情報は削除されません。削除を希望する場合は開発者へご連絡ください。</Text>
+            <Text style={s.policyTitle}>匿名ID・サービス</Text><Text style={s.policyText}>グループ同期には匿名の利用者IDを使い、メールアドレス登録は求めません。データベース、認証、同期および画像保存はSupabaseを利用します。広告SDK、Analytics SDK、広告目的の追跡は使用していません。</Text>
+            <Text style={s.policyTitle}>共有機能</Text><Text style={s.policyText}>結果や招待リンクを共有すると、内容をOSの共有シートに渡します。共有先での取扱いは、利用者が選んだサービスのポリシーに従います。招待リンクは知っている人がグループに参加できるため、共有先にご注意ください。</Text>
             <Text style={s.policyTitle}>お問い合わせ</Text><Text style={s.policyText}>{SUPPORT_EMAIL}</Text>
             <Text style={s.policyText}>機能や取扱いに変更がある場合は、このポリシーとストア上のプライバシー表示を更新します。</Text>
           </ScrollView>
