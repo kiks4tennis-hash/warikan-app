@@ -148,4 +148,3 @@ export function calculateGroupBalances(group: LedgerGroup): Map<string, number> 
   }
   return balances;
 }
-

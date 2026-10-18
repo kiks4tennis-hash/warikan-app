@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { minimumTransfers } from './settlement';
+import { deleteMyAccount, ensureAnonymousUser } from '../lib/groups';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { useEffect, useMemo, useState } from 'react';
 import { Alert, Keyboard, Linking, Modal, Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -58,6 +60,7 @@ export default function Home() {
   const [showHistory, setShowHistory] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPrivacy, setShowPrivacy] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   useEffect(() => { void AsyncStorage.getItem(HISTORY_KEY).then((raw) => { if (raw) setHistory(JSON.parse(raw) as Saved[]); }).catch(() => {}); }, []);
 
@@ -113,6 +116,35 @@ export default function Home() {
     catch { Alert.alert('メールを開けませんでした', `お問い合わせ先: ${SUPPORT_EMAIL}`); }
   }
 
+  function confirmAccountDeletion() {
+    Alert.alert(
+      'グループアカウントを削除しますか？',
+      'この操作は取り消せません。あなたが作成または支払った支出と、作成したチェックリスト項目を削除します。他のメンバーが作成した支出からあなたを外し、残るメンバーで負担を再計算します。あなたが作成したグループは、他のメンバーがいれば最も早く参加した人へ引き継ぎ、他のメンバーがいなければグループ全体を削除します。',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'アカウントを削除',
+          style: 'destructive',
+          onPress: () => {
+            void (async () => {
+              setDeletingAccount(true);
+              try {
+                await ensureAnonymousUser();
+                await deleteMyAccount();
+                setShowSettings(false);
+                Alert.alert('削除しました', 'グループアカウントと関連データを削除しました。グループ機能を再び使うと、新しい匿名アカウントが作成されます。');
+              } catch (reason) {
+                Alert.alert('削除できませんでした', reason instanceof Error ? reason.message : '通信状態を確認して、もう一度お試しください。');
+              } finally {
+                setDeletingAccount(false);
+              }
+            })();
+          },
+        },
+      ],
+    );
+  }
+
   return (
     <SafeAreaView style={s.safe}>
       <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
@@ -124,6 +156,13 @@ export default function Home() {
           <Pressable onPress={() => setShowPrivacy(true)} style={s.settingRow} accessibilityRole="button"><View><Text style={s.settingTitle}>プライバシーポリシー</Text><Text style={s.settingSubtitle}>このアプリで扱う情報を確認</Text></View><Text style={s.settingChevron}>›</Text></Pressable>
           <Pressable onPress={contactSupport} style={s.settingRow} accessibilityRole="button"><View><Text style={s.settingTitle}>お問い合わせ</Text><Text style={s.settingSubtitle}>{SUPPORT_EMAIL}</Text></View><Text style={s.settingChevron}>↗</Text></Pressable>
           <Text style={s.settingFootnote}>履歴は「履歴」画面から削除できます。</Text>
+          {isSupabaseConfigured && <View style={s.accountDeleteSection}>
+            <Text style={s.settingTitle}>グループアカウント</Text>
+            <Text style={s.settingSubtitle}>匿名アカウントと関連データを削除できます。共有グループは他のメンバーに引き継がれ、あなたが作成または支払った支出などは削除されます。</Text>
+            <Pressable onPress={confirmAccountDeletion} disabled={deletingAccount} style={s.deleteAccountButton} accessibilityRole="button">
+              <Text style={s.deleteAccountText}>{deletingAccount ? '削除しています…' : 'グループアカウントを削除'}</Text>
+            </Pressable>
+          </View>}
         </View> : showHistory ? <View style={s.card}>
           <Text style={s.sectionTitle}>保存した精算</Text>
           {history.length === 0 ? <Text style={s.muted}>保存した履歴はありません</Text> : history.map((item) => <Pressable key={item.id} style={s.historyRow} onPress={() => load(item)}><View><Text style={s.personName}>{item.title}</Text><Text style={s.mutedSmall}>{new Date(item.createdAt).toLocaleDateString('ja-JP')}</Text></View><Text style={s.historyAmount}>{fmt(item.total)}  ›</Text></Pressable>)}
@@ -162,11 +201,12 @@ export default function Home() {
         <SafeAreaView style={s.policySafe}>
           <View style={s.policyHeader}><Text style={s.sectionTitle}>プライバシーポリシー</Text><Pressable onPress={() => setShowPrivacy(false)} accessibilityRole="button"><Text style={s.policyClose}>閉じる</Text></Pressable></View>
           <ScrollView contentContainerStyle={s.policyContent}>
-            <Text style={s.policyUpdated}>最終更新日: 2026年10月6日</Text>
+            <Text style={s.policyUpdated}>最終更新日: 2026年10月18日</Text>
             <Text style={s.policyTitle}>端末内の情報</Text><Text style={s.policyText}>個人精算の会の名前、参加者名、金額、負担比率、立替額および計算結果は、履歴を保存した場合に端末内に保存されます。履歴はアプリ内から削除できます。</Text>
             <Text style={s.policyTitle}>グループ台帳の情報</Text><Text style={s.policyText}>グループ名、表示名、支出の内容・金額・通貨・換算レート・支払者・負担対象、チェックリストおよび添付領収書はSupabaseへ送信され、同じグループのメンバーと共有されます。アプリを削除してもクラウド上の情報は削除されません。削除を希望する場合は開発者へご連絡ください。</Text>
             <Text style={s.policyTitle}>匿名ID・サービス</Text><Text style={s.policyText}>グループ同期には匿名の利用者IDを使い、メールアドレス登録は求めません。データベース、認証、同期および画像保存はSupabaseを利用します。広告SDK、Analytics SDK、広告目的の追跡は使用していません。</Text>
             <Text style={s.policyTitle}>共有機能</Text><Text style={s.policyText}>結果や招待リンクを共有すると、内容をOSの共有シートに渡します。共有先での取扱いは、利用者が選んだサービスのポリシーに従います。招待リンクは知っている人がグループに参加できるため、共有先にご注意ください。</Text>
+            <Text style={s.policyTitle}>アカウントとデータの削除</Text><Text style={s.policyText}>「設定・サポート」からグループアカウントを削除できます。削除すると、あなたが作成または支払った支出、あなたが作成したチェックリスト項目、添付画像およびアカウントが削除されます。他のメンバーが作成した支出ではあなたの負担対象を外し、残るメンバーに負担額を再配分します。あなたが作成したグループは、他のメンバーがいる場合は最も早く参加した人へ引き継ぎ、他のメンバーがいない場合はグループ全体を削除します。</Text>
             <Text style={s.policyTitle}>お問い合わせ</Text><Text style={s.policyText}>{SUPPORT_EMAIL}</Text>
             <Text style={s.policyText}>機能や取扱いに変更がある場合は、このポリシーとストア上のプライバシー表示を更新します。</Text>
           </ScrollView>
@@ -187,7 +227,6 @@ const s = StyleSheet.create({
   primary: { backgroundColor: '#285B39', alignItems: 'center', justifyContent: 'center', borderRadius: 14, paddingVertical: 16, marginTop: 18 }, primaryDisabled: { backgroundColor: '#9BA99D' }, primaryText: { color: '#FFFFFF', fontWeight: '800', fontSize: 16 }, validation: { color: '#A05A4C', fontSize: 12, lineHeight: 18, marginTop: 8 },
   resultCard: { backgroundColor: '#FFFFFF', borderRadius: 20, padding: 18, marginBottom: 12, borderWidth: 1, borderColor: '#E4EDE3' }, resultHead: { backgroundColor: '#285B39', borderRadius: 15, padding: 16, marginBottom: 20 }, resultEyebrow: { color: '#CDE1CE', fontSize: 12, fontWeight: '700' }, resultTotal: { color: '#FFFFFF', fontWeight: '800', fontSize: 27, marginTop: 4 }, resultSection: { color: '#536255', fontSize: 13, fontWeight: '800', marginBottom: 8 }, resultRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 9, borderBottomWidth: 1, borderBottomColor: '#F0F2EF' }, personName: { color: '#27382B', fontWeight: '700', fontSize: 15 }, amount: { color: '#283C2D', fontWeight: '800', fontSize: 16 }, transferTitle: { marginTop: 22 }, transferRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F5F8F4', padding: 12, borderRadius: 11, marginTop: 6 }, transferNames: { color: '#405345', fontWeight: '600', flexShrink: 1 }, arrow: { color: '#5E8A67', fontWeight: '800' }, transferAmount: { color: '#285B39', fontWeight: '800', marginLeft: 8 }, actions: { flexDirection: 'row', gap: 9, marginTop: 20 }, secondary: { flex: 1, borderWidth: 1, borderColor: '#BDD0BF', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }, secondaryText: { color: '#345C3B', fontWeight: '700' }, primarySmall: { flex: 1, backgroundColor: '#285B39', borderRadius: 12, paddingVertical: 13, alignItems: 'center' }, disclaimer: { color: '#9AA39B', fontSize: 11, marginTop: 12, textAlign: 'center' }, muted: { color: '#879188', fontSize: 14, lineHeight: 21, paddingVertical: 8 },
   privacy: { textAlign: 'center', color: '#89938A', fontSize: 11, lineHeight: 17, marginTop: 8, paddingHorizontal: 12 }, footer: { color: '#A2AAA2', fontSize: 11, textAlign: 'center', marginTop: 22 }, historyRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14, borderBottomWidth: 1, borderColor: '#EEF1ED' }, historyAmount: { color: '#31573D', fontWeight: '700' }, deleteButton: { alignSelf: 'center', marginTop: 18, padding: 10 }, deleteText: { color: '#A05A4C', fontSize: 13, fontWeight: '600' },
-  settingIntro: { color: '#738075', fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: 10 }, settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderColor: '#EEF1ED' }, settingTitle: { color: '#293B2E', fontWeight: '700', fontSize: 15 }, settingSubtitle: { color: '#879188', fontSize: 12, marginTop: 4 }, settingChevron: { color: '#56725A', fontSize: 22, paddingHorizontal: 6 }, settingFootnote: { color: '#879188', fontSize: 12, marginTop: 16 },
+  settingIntro: { color: '#738075', fontSize: 13, lineHeight: 20, marginTop: 8, marginBottom: 10 }, settingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 16, borderBottomWidth: 1, borderColor: '#EEF1ED' }, settingTitle: { color: '#293B2E', fontWeight: '700', fontSize: 15 }, settingSubtitle: { color: '#879188', fontSize: 12, marginTop: 4 }, settingChevron: { color: '#56725A', fontSize: 22, paddingHorizontal: 6 }, settingFootnote: { color: '#879188', fontSize: 12, marginTop: 16 }, accountDeleteSection: { borderTopWidth: 1, borderColor: '#EEF1ED', marginTop: 20, paddingTop: 17 }, deleteAccountButton: { borderWidth: 1, borderColor: '#CFA9A2', borderRadius: 11, paddingVertical: 12, alignItems: 'center', marginTop: 13 }, deleteAccountText: { color: '#A04436', fontWeight: '700', fontSize: 13 },
   policySafe: { flex: 1, backgroundColor: '#FFFFFF' }, policyHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#E8ECE7' }, policyClose: { color: '#315B3C', fontSize: 15, fontWeight: '700' }, policyContent: { paddingHorizontal: 22, paddingVertical: 20, paddingBottom: 40 }, policyUpdated: { color: '#8A948B', fontSize: 12, marginBottom: 18 }, policyTitle: { color: '#294632', fontSize: 16, fontWeight: '800', marginTop: 16, marginBottom: 6 }, policyText: { color: '#536157', fontSize: 14, lineHeight: 22 },
 });
-

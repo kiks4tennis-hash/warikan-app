@@ -16,4 +16,3 @@ export function guessReceiptFields(rawText: string): ReceiptGuess {
     rawText,
   };
 }
-

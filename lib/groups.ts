@@ -59,6 +59,14 @@ export async function ensureAnonymousUser(): Promise<User> {
   return data.user;
 }
 
+export async function deleteMyAccount(): Promise<void> {
+  const api = client();
+  const { data, error } = await api.functions.invoke('delete-account');
+  if (error) throw error;
+  if (!data?.success) throw new Error('アカウントを削除できませんでした。');
+  await api.auth.signOut({ scope: 'local' }).catch(() => undefined);
+}
+
 export async function listMyGroups(userId: string): Promise<GroupSummary[]> {
   const { data, error } = await client()
     .from('group_members')
@@ -237,4 +245,3 @@ export function watchGroup(groupId: string, refresh: () => void): RealtimeChanne
 export async function removeGroupWatch(channel: RealtimeChannel): Promise<void> {
   if (supabase) await supabase.removeChannel(channel);
 }
-

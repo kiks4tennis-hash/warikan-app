@@ -90,4 +90,3 @@ function settleGroup(group: Balance[]): SettlementTransfer[] {
   }
   return transfers;
 }
-

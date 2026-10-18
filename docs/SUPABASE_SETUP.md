@@ -46,7 +46,24 @@ Groups, expenses, checklists, exchange-rate entry, and settlement work in Expo G
 
 Invite codes are random, stored as SHA-256 hashes, and expire after 30 days. A person who can open the invite link can join that group, so share it only with intended members. The database policies restrict group rows to members.
 
+## Account deletion before App Store submission
+
+The shared-group feature creates an anonymous Supabase account. Before release, apply the account-deletion migration and deploy the `delete-account` Edge Function:
+
+1. Run [`supabase/migrations/202610180001_account_deletion.sql`](../supabase/migrations/202610180001_account_deletion.sql) in the Supabase Dashboard's **SQL Editor**.
+2. In PowerShell at the project root, authenticate and deploy the function:
+
+   ```powershell
+   npx supabase@latest login
+   npx supabase@latest link --project-ref kyuqofoeembejpbeogna
+   npx supabase@latest functions deploy delete-account --project-ref kyuqofoeembejpbeogna
+   ```
+
+   The function uses Supabase's server-side `SUPABASE_SERVICE_ROLE_KEY`; never add that key to the app, `.env`, or EAS client variables.
+3. Test deletion with a test account that owns a group with other members, a group with no other members, and membership in another person's group. Confirm that ownership is transferred or the empty group is removed, receipt files are deleted, and the account can no longer sign in.
+
+Deletion removes expenses created or paid by that user and checklist items they created. In remaining expenses, the user is removed from the split and the remaining active participants share the amount by their existing weights. The user's owned groups transfer to the earliest remaining member, or are deleted if no other member remains.
+
 ## Privacy and backups
 
 Group names, participant display names, expenses, checklist items, and attached receipts are cloud data visible to group members. Local-only calculator history remains on the device. Free-plan projects do not include automatic backups and may pause after inactivity; export or backup important records before a production launch.
-

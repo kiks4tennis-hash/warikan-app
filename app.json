@@ -1,6 +1,7 @@
 {
   "expo": {
     "name": "割り勘ノート",
+    "icon": "./assets/icon.png",
     "slug": "warikan-app",
     "scheme": "warikanseisan",
     "version": "1.0.0",
@@ -9,13 +10,30 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.kazumax71.warikanseisan"
+      "bundleIdentifier": "com.kazumax71.warikanseisan",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "plugins": [
       "expo-router",
-      ["expo-image-picker", { "photosPermission": "レシート画像を選択して支出を記録するために写真へのアクセスを使用します。" }]
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "レシート画像を選択して支出を記録するために写真へのアクセスを使用します。"
+        }
+      ],
+      "expo-sharing"
     ],
-    "experiments": { "typedRoutes": true }
+    "experiments": {
+      "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "6f8b94b2-7ea7-46f7-b17e-1159b4b2bac4"
+      }
+    },
+    "owner": "kazumax71"
   }
 }
-

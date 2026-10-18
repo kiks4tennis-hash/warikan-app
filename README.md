@@ -1,47 +1,53 @@
-# 割り勘ノート — iOS App
+# 割り勘ノート
 
-参加者、負担比率、各人の立替額から負担額と送金先を計算する、React Native + ExpoのiOSアプリです。
+旅行・イベント・家計で使える、個人精算と共同グループ台帳のiOSアプリです。React Native + Expoで実装しています。
 
-## 含まれるもの
+## 機能
 
-- 会の名前、合計金額、参加者、負担比率、立替額の入力
-- 整数円での按分と最大剰余法による端数配分（各人の負担合計は会計合計に一致）
-- 立替額と負担額の差から送金指示を作成
-- iOS共有シートへの精算結果共有
-- 端末内の精算履歴保存・再表示・全削除
-- サーバー、アカウント、広告、Analytics、課金SDKなし
+- 参加者、負担比率、立替額から負担額と送金先を計算
+- 精算履歴の端末保存、再表示、削除、共有
+- Supabaseを使ったグループ台帳、招待リンク、支出・チェックリストの共同編集
+- 50通貨の支出入力と手入力の換算レート
+- レシート画像の端末内OCR、確認後のグループ共有保存
+- 匿名グループアカウントとアカウント削除
 
-## 起動
+個人精算は端末内のみで動きます。共同グループ機能ではSupabaseのDatabase、Auth、Realtime、Storageを利用します。広告SDK、Analytics SDK、アプリ内課金は含みません。
 
-Node.jsを用意した環境で依存関係を導入し、Expo開発サーバーを起動してください。Expo SDKと依存パッケージの整合が必要なため、インストール時にExpoの診断結果に従い、SDK対応版へ揃えてください。iOS実機で確認する場合はExpo GoまたはDevelopment Buildを利用します。
+## ローカル起動
 
-## App Store提出前に必要な作業
+Node.jsを用意し、プロジェクトルートで実行します。
 
-1. `app.json` のBundle IDは `com.kazumax71.warikanseisan` に設定済み。App Store Connectで同じIDを登録する。
-2. Apple Developer ProgramとApp Store Connectでアプリを登録し、アイコン、スクリーンショット、説明、年齢区分を設定。
-3. `docs/` をGitHub Pagesで公開し、`docs/privacy-policy.html` と `docs/support.html` のURLをApp Store Connectへ登録する。このアプリは精算内容を外部送信しませんが、配信方式や将来追加するSDKに応じて申告を見直してください。
-4. iPhone実機で入力、計算、共有、保存/再表示、削除、アクセシビリティを確認。
-5. Apple署名済みビルドを作成し、TestFlightで確認してから審査へ提出。
+```powershell
+npm install
+npx expo install --check
+npm run typecheck
+npx expo start
+```
 
-この作業環境ではApple署名済みiOSビルドとApp Store Connectへの最終提出はまだ行っていません。EAS Build/EAS Submitを使えばWindowsからビルドとアップロードを進められます。Xcodeを使った手動ビルド/アップロードを選ぶ場合はMacが必要です。
+グループ機能を使う場合は `.env.example` を `.env` にコピーし、SupabaseのProject URLとPublishable keyを設定してください。`.env` はGitに登録しないでください。`service_role` / secret keyはクライアントアプリに設定しないでください。
 
-## MVPの仕様上の範囲
+## Supabase
 
-- 会計通貨は日本円、1円単位。
-- 立替額の合計が会計総額と一致しない場合は計算しない。
-- 負担比率は整数のみ。比率1は標準負担を表す。
-- 税/サービス料の自動計算、複数会計、OCR、連絡先連携、送金実行は対象外。
-- 同じ名前の参加者は、結果と共有文で `(1)`, `(2)` を付けて区別します。
+Database、匿名サインイン、レシート用Private Storageの設定は [`docs/SUPABASE_SETUP.md`](docs/SUPABASE_SETUP.md) を参照してください。App Store提出前にアカウント削除用の追加マイグレーションとEdge Functionを適用する必要があります。
 
-## GitHub Pages公開
+## iOS EAS Build
 
-このリポジトリの `docs/` がGitHub Pages用の公開ディレクトリです。GitHubのリポジトリで **Settings → Pages → Build and deployment → Deploy from a branch** を選び、ブランチ `main`、フォルダ `/docs` を指定して保存します。
+Bundle IDは `com.kazumax71.warikanseisan` です。Expoアカウント `kazumax71` のEASプロジェクトにリンク済みです。
 
-公開URLは通常、次の形です（`<owner>` はGitHubユーザー名またはOrganization名）。
+```powershell
+npx eas-cli@latest login
+$localEnv = Get-Content .env | ConvertFrom-StringData
+npx eas-cli@latest env:set --name EXPO_PUBLIC_SUPABASE_URL --value $localEnv.EXPO_PUBLIC_SUPABASE_URL --environment production --visibility plaintext
+npx eas-cli@latest env:set --name EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --value $localEnv.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY --environment production --visibility plaintext
+npx eas-cli@latest build --platform ios --profile production
+npx eas-cli@latest submit --platform ios --latest
+```
 
-- トップ: `https://<owner>.github.io/warikan-app/`
-- プライバシーポリシー: `https://<owner>.github.io/warikan-app/privacy-policy.html`
-- サポート: `https://<owner>.github.io/warikan-app/support.html`
+`EXPO_PUBLIC_` 値はアプリのJavaScriptに含まれる公開値です。サービス用secret keyを登録しないでください。iOS production buildをApp Store ConnectへアップロードするとTestFlightで確認できます。App Storeでの一般公開は、App Store Connectで掲載情報を完成させ、App Reviewに提出して承認された後に行います。
 
-Pagesの公開後、サインインしていないブラウザでも3ページが開けることを確認し、ポリシーURLとサポートURLをApp Store Connectに設定します。
+## 公開ページ
 
+`docs/` はGitHub Pages用です。GitHubの **Settings → Pages** で、ブランチ `main` のフォルダー `/docs` を公開してください。
+
+- プライバシーポリシー: `https://kiks4tennis-hash.github.io/warikan-app/privacy-policy.html`
+- サポート: `https://kiks4tennis-hash.github.io/warikan-app/support.html`

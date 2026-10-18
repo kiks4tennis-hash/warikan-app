@@ -57,4 +57,3 @@ const s = StyleSheet.create({
   error: { color: '#A04436', fontSize: 13, lineHeight: 19, marginTop: 14 },
   cancel: { alignSelf: 'center', padding: 14, marginTop: 4 }, cancelText: { color: '#537059', fontWeight: '700' },
 });
-
